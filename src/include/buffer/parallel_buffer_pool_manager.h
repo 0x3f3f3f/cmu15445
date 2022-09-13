@@ -93,9 +93,8 @@ class ParallelBufferPoolManager : public BufferPoolManager {
  private:
   std::vector<BufferPoolManagerInstance *> bpms_;
   std::mutex latch_;
-  std::unordered_map<page_id_t, size_t> page_id_to_instance_;
+ 
   size_t buffer_pool_size_;
   size_t start_new_page_idx_;
-  
 };
 }  // namespace bustub

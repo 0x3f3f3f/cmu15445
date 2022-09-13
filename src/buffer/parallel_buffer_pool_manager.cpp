@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 //                         BusTub
@@ -37,28 +36,17 @@ ParallelBufferPoolManager::~ParallelBufferPoolManager() {
 
 auto ParallelBufferPoolManager::GetPoolSize() -> size_t {
   // Get size of all BufferPoolManagerInstances
+
   return this->buffer_pool_size_;
 }
 
 auto ParallelBufferPoolManager::GetBufferPoolManager(page_id_t page_id) -> BufferPoolManager * {
   // Get BufferPoolManager responsible for handling given page id. You can use this method in your other methods.
-  int idx = page_id_to_instance_[page_id];
-  return bpms_[idx];
+  return bpms_[page_id % bpms_.size()];
 }
 
 auto ParallelBufferPoolManager::FetchPgImp(page_id_t page_id) -> Page * {
   // Fetch page for page_id from responsible BufferPoolManagerInstance
-  std::lock_guard<std::mutex> lock(latch_);
-  if (page_id_to_instance_.count(page_id) == 0) {
-    for (size_t i = 0; i < this->bpms_.size(); ++i) {
-      Page *page = bpms_[i]->FetchPage(page_id);
-      if (page != nullptr) {
-        page_id_to_instance_[page_id] = i;
-        return page;
-      }
-    }
-    return nullptr;
-  }
   return GetBufferPoolManager(page_id)->FetchPage(page_id);
 }
 
@@ -82,38 +70,24 @@ auto ParallelBufferPoolManager::NewPgImp(page_id_t *page_id) -> Page * {
   // 2.   Bump the starting index (mod number of instances) to start search at a different BPMI each time this function
   // is called
   std::lock_guard<std::mutex> lock(latch_);
-  size_t st = this->start_new_page_idx_;
-  Page *target_page = nullptr;
-  while (st < this->bpms_.size() && target_page == nullptr) {
-    target_page = bpms_[st]->NewPage(page_id);
-    ++st;
+ 
+  Page *page = nullptr;
+  for (size_t i = 0; i < bpms_.size(); ++i)
+  {
+    page = bpms_[start_new_page_idx_]->NewPage(page_id);
+    start_new_page_idx_  = (start_new_page_idx_ + 1) % bpms_.size();
+    if (page != nullptr)
+    {
+      return page;
+    }
   }
-
-  if (target_page == nullptr) {
-    return nullptr;
-  }
-
-  page_id_to_instance_[*page_id] = st - 1;
-  this->start_new_page_idx_ = st % this->bpms_.size();
-  return target_page;
+  return nullptr;
 }
 
 auto ParallelBufferPoolManager::DeletePgImp(page_id_t page_id) -> bool {
   // Delete page_id from responsible BufferPoolManagerInstance
-  std::lock_guard<std::mutex> lock(latch_);
-  if (page_id_to_instance_.count(page_id) == 0) {
-    return true;
-  }
-
-  bool res = GetBufferPoolManager(page_id)->DeletePage(page_id);
-  // 即使返回删除不成功的情况，在对应的instance中没有了对应的page_id，在总的unordered_map中也可以直接删除。
-  page_id_to_instance_.erase(page_id);
-  // 写法冗余
-  // if (!res) {
-  //   return false;
-  // }
-  // return true;
-  return res;
+  
+  return GetBufferPoolManager(page_id)->DeletePage(page_id);
 }
 
 void ParallelBufferPoolManager::FlushAllPgsImp() {
