@@ -218,6 +218,11 @@ auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
 
 auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> bool {
   std::lock_guard<std::mutex> lock(latch_);
+  // 可能传入不存在的page_id
+  if (page_table_.count(page_id) == 0)
+  {
+    return false;
+  }
   frame_id_t frame_id = page_table_[page_id];
   if (pages_[frame_id].pin_count_ <= 0) {
     return false;
