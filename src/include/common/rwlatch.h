@@ -31,7 +31,7 @@ class ReaderWriterLatch {
  public:
   ReaderWriterLatch() = default;
   ~ReaderWriterLatch() { std::lock_guard<mutex_t> guard(mutex_); }
-
+  // 自己声明的宏，禁止拷贝构造和复制构造函数的使用
   DISALLOW_COPY(ReaderWriterLatch);
 
   /**

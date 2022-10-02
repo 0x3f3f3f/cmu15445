@@ -18,7 +18,7 @@
 #include "common/logger.h"
 
 namespace bustub {
-
+// log_manager头文件那里已经有默认值nullptr
 BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManager *disk_manager,
                                                      LogManager *log_manager)
     : BufferPoolManagerInstance(pool_size, 1, 0, disk_manager, log_manager) {}
@@ -76,8 +76,7 @@ void BufferPoolManagerInstance::FlushAllPgsImp() {
   //     disk_manager_->WritePage(pages_[i].page_id_, pages_[i].data_);
   //   }
   // }
-  for(auto c : page_table_)
-  {
+  for (auto c : page_table_) {
     frame_id_t frame_id = c.second;
     page_id_t page_id = c.first;
     disk_manager_->WritePage(page_id, pages_[frame_id].data_);
@@ -92,7 +91,6 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
 
   // 3.   Update P's metadata, zero out memory and add P to the page table.
   // 4.   Set the page ID output parameter. Return a pointer to P.
-  
 
   if (!free_list_.empty()) {
     page_id_t new_page_id = AllocatePage();
@@ -219,8 +217,7 @@ auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
 auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> bool {
   std::lock_guard<std::mutex> lock(latch_);
   // 可能传入不存在的page_id
-  if (page_table_.count(page_id) == 0)
-  {
+  if (page_table_.count(page_id) == 0) {
     return false;
   }
   frame_id_t frame_id = page_table_[page_id];

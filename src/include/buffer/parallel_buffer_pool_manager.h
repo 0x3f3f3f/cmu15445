@@ -93,7 +93,7 @@ class ParallelBufferPoolManager : public BufferPoolManager {
  private:
   std::vector<BufferPoolManagerInstance *> bpms_;
   std::mutex latch_;
- 
+
   size_t buffer_pool_size_;
   size_t start_new_page_idx_;
 };

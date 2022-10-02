@@ -70,14 +70,12 @@ auto ParallelBufferPoolManager::NewPgImp(page_id_t *page_id) -> Page * {
   // 2.   Bump the starting index (mod number of instances) to start search at a different BPMI each time this function
   // is called
   std::lock_guard<std::mutex> lock(latch_);
- 
+
   Page *page = nullptr;
-  for (size_t i = 0; i < bpms_.size(); ++i)
-  {
+  for (size_t i = 0; i < bpms_.size(); ++i) {
     page = bpms_[start_new_page_idx_]->NewPage(page_id);
-    start_new_page_idx_  = (start_new_page_idx_ + 1) % bpms_.size();
-    if (page != nullptr)
-    {
+    start_new_page_idx_ = (start_new_page_idx_ + 1) % bpms_.size();
+    if (page != nullptr) {
       return page;
     }
   }
@@ -86,7 +84,7 @@ auto ParallelBufferPoolManager::NewPgImp(page_id_t *page_id) -> Page * {
 
 auto ParallelBufferPoolManager::DeletePgImp(page_id_t page_id) -> bool {
   // Delete page_id from responsible BufferPoolManagerInstance
-  
+
   return GetBufferPoolManager(page_id)->DeletePage(page_id);
 }
 

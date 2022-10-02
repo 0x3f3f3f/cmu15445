@@ -165,7 +165,6 @@ class ExtendibleHashTable {
   page_id_t directory_page_id_;
   BufferPoolManager *buffer_pool_manager_;
   KeyComparator comparator_;
-
   // Readers includes inserts and removes, writers are splits and merges
   ReaderWriterLatch table_latch_;
   HashFunction<KeyType> hash_fn_;

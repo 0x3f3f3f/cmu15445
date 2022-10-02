@@ -38,6 +38,7 @@ template <typename KeyType, typename ValueType, typename KeyComparator>
 class HashTableBucketPage {
  public:
   // Delete all constructor / destructor to ensure memory safety
+  // 禁用无参的构造函数
   HashTableBucketPage() = delete;
 
   /**
@@ -50,7 +51,7 @@ class HashTableBucketPage {
   /**
    * Attempts to insert a key and value in the bucket.  Uses the occupied_
    * and readable_ arrays to keep track of each slot's availability.
-   *
+   * 可以重复健，但是不能重复键值
    * @param key key to insert
    * @param value value to insert
    * @return true if inserted, false if duplicate KV pair or bucket is full
@@ -137,11 +138,16 @@ class HashTableBucketPage {
    */
   void PrintBucket();
 
+  void ResetData();
+
+  auto GetExistedData(std::vector<MappingType> *res) const -> bool;
+
  private:
   //  For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
+  // std::pair<KeyType, ValueType>，类型在上面的模板传入 arr[1],就是pair数组开的一个大小，初始值first和second都是0
   MappingType array_[1];
 };
 

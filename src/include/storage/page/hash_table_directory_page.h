@@ -93,6 +93,8 @@ class HashTableDirectoryPage {
    * upwards.  For example, global depth 3 corresponds to 0x00000007 in a 32-bit
    * representation.
    *
+   * 这里说明使用的的是散列后缀
+   *
    * @return mask of global_depth 1's and the rest 0's (with 1's from LSB upwards)
    */
   auto GetGlobalDepthMask() -> uint32_t;
@@ -108,7 +110,6 @@ class HashTableDirectoryPage {
 
   /**
    * Get the global depth of the hash table directory
-   *
    * @return the global depth of the directory
    */
   auto GetGlobalDepth() -> uint32_t;
@@ -124,6 +125,8 @@ class HashTableDirectoryPage {
   void DecrGlobalDepth();
 
   /**
+   * 每个桶的需要的后缀必须小于global_depth
+   *
    * @return true if the directory can be shrunk
    */
   auto CanShrink() -> bool;
@@ -166,6 +169,7 @@ class HashTableDirectoryPage {
    * This is not the same as the bucket index itself.  This method
    * is helpful for finding the pair, or "split image", of a bucket.
    *
+   * 桶需要分裂的时候，local_depth要增加1位，然后根据新增加的一位区分分裂的两个桶，获取刚分裂的这一位
    * @param bucket_idx bucket index to lookup
    * @return the high bit corresponding to the bucket's local depth
    */
@@ -188,10 +192,14 @@ class HashTableDirectoryPage {
 
  private:
   page_id_t page_id_;
+  // 日志序列号,项目4
   lsn_t lsn_;
+  // 大括号初始化是cpp统一初始化的一种方式，消除歧义
+  // 目录的位数
   uint32_t global_depth_{0};
+  // 记录每个桶的散列后缀是多少位
   uint8_t local_depths_[DIRECTORY_ARRAY_SIZE];
+  // 存储的是第i个桶的page_id，每个桶通过一个页存储
   page_id_t bucket_page_ids_[DIRECTORY_ARRAY_SIZE];
 };
-
 }  // namespace bustub
