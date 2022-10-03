@@ -87,7 +87,7 @@ auto HASH_TABLE_TYPE::FetchDirectoryPage() -> HashTableDirectoryPage * {
   // 上面初始化的directory_page_id_后面直接获取
   Page *directory_page = buffer_pool_manager_->FetchPage(directory_page_id_);
   assert(directory_page != nullptr);
-  this->table_latch_.WUnlock();
+  // this->table_latch_.WUnlock();
   return reinterpret_cast<HashTableDirectoryPage *>(directory_page->GetData());
 }
 
@@ -104,7 +104,7 @@ auto HASH_TABLE_TYPE::FetchBucketPage(page_id_t bucket_page_id) -> HASH_TABLE_BU
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std::vector<ValueType> *result) -> bool {
-  this->table_latch_.WLock();
+  // this->table_latch_.WLock();
   HashTableDirectoryPage *directory = FetchDirectoryPage();
   page_id_t page_id = KeyToPageId(key, directory);
   HASH_TABLE_BUCKET_TYPE *bucket_page = FetchBucketPage(page_id);
@@ -114,7 +114,7 @@ auto HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std
   assert(buffer_pool_manager_->UnpinPage(directory->GetPageId(), true));
   // 只是读取值
   assert(buffer_pool_manager_->UnpinPage(page_id, false));
-  this->table_latch_.WUnlock();
+  // this->table_latch_.WUnlock();
   return res;
 }
 
@@ -123,12 +123,13 @@ auto HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_TYPE::Insert(Transaction *transaction, const KeyType &key, const ValueType &value) -> bool {
-  this->table_latch_.WLock();
+  // this->table_latch_.WLock();
   // 获取目录页
   HashTableDirectoryPage *directory = this->FetchDirectoryPage();
   // 获取第几个目录项
   uint32_t directory_idx = KeyToDirectoryIndex(key, directory);
-
+  // 根据key映射成page_id
+  page_id_t bucket_page_id = KeyToPageId(key, directory);
   // LOG_DEBUG("**************");
   // 根据page_id获得对应的页的
   HASH_TABLE_BUCKET_TYPE *bucket = FetchBucketPage(bucket_page_id);
@@ -140,21 +141,23 @@ auto HASH_TABLE_TYPE::Insert(Transaction *transaction, const KeyType &key, const
       if (!SplitInsert(transaction, key, value)) {
         assert(buffer_pool_manager_->UnpinPage(directory->GetPageId(), true));
         assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true));
-        this->table_latch_.WUnlock();
+        // this->table_latch_.WUnlock();
         return false;
       }
     } else {
       // 可以进行优化
       assert(buffer_pool_manager_->UnpinPage(directory->GetPageId(), true));
       assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true));
-      this->table_latch_.WUnlock();
+      // this->table_latch_.WUnlock();
       return false;
     }
   }
-  
+  // directory->PrintDirectory();
+  // 插入成功，更新directory
+  directory->SetBucketPageId(directory_idx, bucket_page_id);
   assert(buffer_pool_manager_->UnpinPage(directory->GetPageId(), true));
   assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true));
-  this->table_latch_.WUnlock();
+  // this->table_latch_.WUnlock();
   return true;
 }
 
@@ -259,7 +262,7 @@ auto HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const ValueType &value) -> bool {
-  this->table_latch_.WLock();
+  // this->table_latch_.WLock();
   // 获取目录页
   HashTableDirectoryPage *directory = this->FetchDirectoryPage();
   // LOG_DEBUG("**************%d", directory_idx);
@@ -273,7 +276,9 @@ auto HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   // LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++%d", flag);
   // 没有找到对应的key 和 value进行删除
   if (!flag) {
-    this->table_latch_.WUnlock();
+    // this->table_latch_.WUnlock();
+    assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true));
+    assert(buffer_pool_manager_->UnpinPage(directory->GetPageId(), true));
     return false;
   }
   // 找到了判断这个bucket_id的页内容是否为空，如果空就需要进行合并操作
@@ -282,7 +287,7 @@ auto HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   }
   assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true));
   assert(buffer_pool_manager_->UnpinPage(directory->GetPageId(), true));
-  this->table_latch_.WUnlock();
+  // this->table_latch_.WUnlock();
   return true;
 }
 

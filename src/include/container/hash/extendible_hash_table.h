@@ -161,6 +161,7 @@ class ExtendibleHashTable {
    */
   void Merge(Transaction *transaction, const KeyType &key, const ValueType &value);
 
+  std::mutex directory_latch_;
   // member variables
   page_id_t directory_page_id_;
   BufferPoolManager *buffer_pool_manager_;
@@ -169,5 +170,4 @@ class ExtendibleHashTable {
   ReaderWriterLatch table_latch_;
   HashFunction<KeyType> hash_fn_;
 };
-
 }  // namespace bustub
