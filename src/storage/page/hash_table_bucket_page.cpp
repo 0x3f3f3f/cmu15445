@@ -183,6 +183,25 @@ auto HASH_TABLE_BUCKET_TYPE::GetExistedData(std::vector<MappingType> *res) const
   return !res->empty();
 }
 
+template <typename KeyType, typename ValueType, typename KeyComparator>
+MappingType *HASH_TABLE_BUCKET_TYPE::GetArrayCopy() {
+  uint32_t num = NumReadable();
+  MappingType *copy = new MappingType[num];
+  for (uint32_t i = 0, index = 0; i < BUCKET_ARRAY_SIZE; i++) {
+    if (IsReadable(i)) {
+      copy[index++] = array_[i];
+    }
+  }
+  return copy;
+}
+
+template <typename KeyType, typename ValueType, typename KeyComparator>
+void HASH_TABLE_BUCKET_TYPE::Reset() {
+  memset(occupied_, 0, sizeof(occupied_));
+  memset(readable_, 0, sizeof(readable_));
+  memset(array_, 0, sizeof(array_));
+}
+
 // DO NOT REMOVE ANYTHING BELOW THIS LINE
 template class HashTableBucketPage<int, int, IntComparator>;
 
