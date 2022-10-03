@@ -118,30 +118,76 @@ void HASH_TABLE_BUCKET_TYPE::SetReadable(uint32_t bucket_idx) {
   }
 }
 
+
 template <typename KeyType, typename ValueType, typename KeyComparator>
-auto HASH_TABLE_BUCKET_TYPE::IsFull() -> bool {
-  for (int i = 0; i < static_cast<int>(BUCKET_ARRAY_SIZE); ++i) {
-    if (!IsReadable(i)) {
+bool HASH_TABLE_BUCKET_TYPE::IsFull() {
+  u_int8_t mask = 255;
+  // 先以char为单位
+  size_t i_num = BUCKET_ARRAY_SIZE / 8;
+  for (size_t i = 0; i < i_num; i++) {
+    uint8_t c = static_cast<uint8_t>(readable_[i]);
+    if ((c & mask) != mask) {
       return false;
+    }
+  }
+
+  // 最后还要看剩余的
+  size_t i_remain = BUCKET_ARRAY_SIZE % 8;
+  if (i_remain > 0) {
+    uint8_t c = static_cast<uint8_t>(readable_[i_num]);
+    for (size_t j = 0; j < i_remain; j++) {
+      if ((c & 1) != 1) {
+        return false;
+      }
+      c >>= 1;
     }
   }
   return true;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
-auto HASH_TABLE_BUCKET_TYPE::NumReadable() -> uint32_t {
-  uint32_t readable_number = 0;
-  for (int i = 0; i < static_cast<int>(BUCKET_ARRAY_SIZE); ++i) {
-    if (IsReadable(i)) {
-      ++readable_number;
+uint32_t HASH_TABLE_BUCKET_TYPE::NumReadable() {
+  // 要分别对每个char中的每位做判断
+  uint32_t num = 0;
+
+  // 先以char为单位
+  size_t i_num = BUCKET_ARRAY_SIZE / 8;
+  for (size_t i = 0; i < i_num; i++) {
+    uint8_t c = static_cast<uint8_t>(readable_[i]);
+    for (uint8_t j = 0; j < 8; j++) {
+      // 取最低位判断
+      if ((c & 1) > 0) {
+        num++;
+      }
+      c >>= 1;
     }
   }
-  return readable_number;
+
+  // 最后还要看剩余的
+  size_t i_remain = BUCKET_ARRAY_SIZE % 8;
+  if (i_remain > 0) {
+    uint8_t c = static_cast<uint8_t>(readable_[i_num]);
+    for (size_t j = 0; j < i_remain; j++) {
+      // 取最低位判断
+      if ((c & 1) == 1) {
+        num++;
+      }
+      c >>= 1;
+    }
+  }
+
+  return num;
 }
+
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::IsEmpty() -> bool {
-  return NumReadable() == 0;
+  for (int i = 0; i < static_cast<int>(BUCKET_ARRAY_SIZE); ++i) {
+    if (IsReadable(i)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
