@@ -1,15 +1,3 @@
-//===----------------------------------------------------------------------===//
-//
-//                         BusTub
-//
-// hash_table_bucket_page.h
-//
-// Identification: src/include/storage/page/hash_table_bucket_page.h
-//
-// Copyright (c) 2015-2021, Carnegie Mellon University Database Group
-//
-//===----------------------------------------------------------------------===//
-
 #pragma once
 
 #include <utility>
@@ -38,7 +26,6 @@ template <typename KeyType, typename ValueType, typename KeyComparator>
 class HashTableBucketPage {
  public:
   // Delete all constructor / destructor to ensure memory safety
-  // 禁用无参的构造函数
   HashTableBucketPage() = delete;
 
   /**
@@ -46,24 +33,25 @@ class HashTableBucketPage {
    *
    * @return true if at least one key matched
    */
-  auto GetValue(KeyType key, KeyComparator cmp, std::vector<ValueType> *result) -> bool;
+  bool GetValue(KeyType key, KeyComparator cmp, std::vector<ValueType> *result);
 
   /**
    * Attempts to insert a key and value in the bucket.  Uses the occupied_
    * and readable_ arrays to keep track of each slot's availability.
-   * 可以重复健，但是不能重复键值
+   * Bucket insertion must always take the first available slot.
+   *
    * @param key key to insert
    * @param value value to insert
    * @return true if inserted, false if duplicate KV pair or bucket is full
    */
-  auto Insert(KeyType key, ValueType value, KeyComparator cmp) -> bool;
+  bool Insert(KeyType key, ValueType value, KeyComparator cmp);
 
   /**
    * Removes a key and value.
    *
    * @return true if removed, false if not found
    */
-  auto Remove(KeyType key, ValueType value, KeyComparator cmp) -> bool;
+  bool Remove(KeyType key, ValueType value, KeyComparator cmp);
 
   /**
    * Gets the key at an index in the bucket.
@@ -71,7 +59,7 @@ class HashTableBucketPage {
    * @param bucket_idx the index in the bucket to get the key at
    * @return key at index bucket_idx of the bucket
    */
-  auto KeyAt(uint32_t bucket_idx) const -> KeyType;
+  KeyType KeyAt(uint32_t bucket_idx) const;
 
   /**
    * Gets the value at an index in the bucket.
@@ -79,7 +67,7 @@ class HashTableBucketPage {
    * @param bucket_idx the index in the bucket to get the value at
    * @return value at index bucket_idx of the bucket
    */
-  auto ValueAt(uint32_t bucket_idx) const -> ValueType;
+  ValueType ValueAt(uint32_t bucket_idx) const;
 
   /**
    * Remove the KV pair at bucket_idx
@@ -92,7 +80,7 @@ class HashTableBucketPage {
    * @param bucket_idx index to look at
    * @return true if the index is occupied, false otherwise
    */
-  auto IsOccupied(uint32_t bucket_idx) const -> bool;
+  bool IsOccupied(uint32_t bucket_idx) const;
 
   /**
    * SetOccupied - Updates the bitmap to indicate that the entry at
@@ -108,7 +96,7 @@ class HashTableBucketPage {
    * @param bucket_idx index to lookup
    * @return true if the index is readable, false otherwise
    */
-  auto IsReadable(uint32_t bucket_idx) const -> bool;
+  bool IsReadable(uint32_t bucket_idx) const;
 
   /**
    * SetReadable - Updates the bitmap to indicate that the entry at
@@ -121,38 +109,34 @@ class HashTableBucketPage {
   /**
    * @return the number of readable elements, i.e. current size
    */
-  auto NumReadable() -> uint32_t;
+  uint32_t NumReadable();
 
   /**
    * @return whether the bucket is full
    */
-  auto IsFull() -> bool;
+  bool IsFull();
 
   /**
    * @return whether the bucket is empty
    */
-  auto IsEmpty() -> bool;
+  bool IsEmpty();
 
   /**
    * Prints the bucket's occupancy information
    */
   void PrintBucket();
 
-  void ResetData();
-
-  auto GetExistedData(std::vector<MappingType> *res) const -> bool;
-
   MappingType *GetArrayCopy();
 
   void Reset();
 
  private:
-  //  For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
+  // For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
-  // std::pair<KeyType, ValueType>，类型在上面的模板传入 arr[1],就是pair数组开的一个大小，初始值first和second都是0
-  MappingType array_[1];
+  // Do not add any members below array_, as they will overlap.
+  MappingType array_[BUCKET_ARRAY_SIZE];
 };
 
 }  // namespace bustub
