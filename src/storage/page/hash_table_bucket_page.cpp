@@ -118,7 +118,6 @@ void HASH_TABLE_BUCKET_TYPE::SetReadable(uint32_t bucket_idx) {
   }
 }
 
-
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::IsFull() {
   u_int8_t mask = 255;
@@ -179,7 +178,6 @@ uint32_t HASH_TABLE_BUCKET_TYPE::NumReadable() {
   return num;
 }
 
-
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::IsEmpty() -> bool {
   for (int i = 0; i < static_cast<int>(BUCKET_ARRAY_SIZE); ++i) {
@@ -195,13 +193,14 @@ void HASH_TABLE_BUCKET_TYPE::PrintBucket() {
   uint32_t size = 0;
   uint32_t taken = 0;
   uint32_t free = 0;
+  // LOG_INFO("Bucket Capacity: %lu", BUCKET_ARRAY_SIZE);
   for (size_t bucket_idx = 0; bucket_idx < static_cast<size_t>(BUCKET_ARRAY_SIZE); bucket_idx++) {
     if (!IsOccupied(bucket_idx)) {
       break;
     }
 
     size++;
-
+    // LOG_DEBUG("*****************%d", (int)IsReadable(bucket_idx));
     if (IsReadable(bucket_idx)) {
       taken++;
     } else {
@@ -209,7 +208,10 @@ void HASH_TABLE_BUCKET_TYPE::PrintBucket() {
     }
   }
 
-  LOG_INFO("Bucket Capacity: %lu, Size: %u, Taken: %u, Free: %u", BUCKET_ARRAY_SIZE, size, taken, free);
+  LOG_INFO(
+      "Bucket Capacity: %lu, Size（所有occupied以后，占用和被占用的总数）: %u, Taken(被占用的): %u, "
+      "Free(一定所有的槽occupied才非0): %u",
+      BUCKET_ARRAY_SIZE, size, taken, free);
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
