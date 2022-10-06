@@ -144,6 +144,8 @@ bool HASH_TABLE_BUCKET_TYPE::IsFull() {
   return true;
 }
 
+// 自己在这两个函数都写错，BUCKET_ARRAY_SIZE有可能占用的char不是整数个，也就是最后一个char，可能没有占用八位
+// BUCKET_ARRAY_SIZE会根据传入的键值对的大小变化的。
 template <typename KeyType, typename ValueType, typename KeyComparator>
 uint32_t HASH_TABLE_BUCKET_TYPE::NumReadable() {
   // 要分别对每个char中的每位做判断
@@ -208,10 +210,8 @@ void HASH_TABLE_BUCKET_TYPE::PrintBucket() {
     }
   }
 
-  LOG_INFO(
-      "Bucket Capacity: %lu, Size（所有occupied以后，占用和被占用的总数）: %u, Taken(被占用的): %u, "
-      "Free(一定所有的槽occupied才非0): %u",
-      BUCKET_ARRAY_SIZE, size, taken, free);
+  LOG_INFO("Bucket Capacity: %lu, Size（占用和被占用的总数）: %u, Taken(被占用的): %u, Free(一定所有的槽occupied): %u",
+           BUCKET_ARRAY_SIZE, size, taken, free);
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>

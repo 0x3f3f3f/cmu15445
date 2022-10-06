@@ -328,7 +328,7 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
     }
   }
 
-  while (directory->CanShrink()) {
+  if (directory->CanShrink()) {
     directory->DecrGlobalDepth();
   }
   assert(buffer_pool_manager_->UnpinPage(directory->GetPageId(), true));
