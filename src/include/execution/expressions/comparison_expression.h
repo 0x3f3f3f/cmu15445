@@ -35,6 +35,7 @@ class ComparisonExpression : public AbstractExpression {
       : AbstractExpression({left, right}, TypeId::BOOLEAN), comp_type_{comp_type} {}
 
   auto Evaluate(const Tuple *tuple, const Schema *schema) const -> Value override {
+    // 火山模型
     Value lhs = GetChildAt(0)->Evaluate(tuple, schema);
     Value rhs = GetChildAt(1)->Evaluate(tuple, schema);
     return ValueFactory::GetBooleanValue(PerformComparison(lhs, rhs));

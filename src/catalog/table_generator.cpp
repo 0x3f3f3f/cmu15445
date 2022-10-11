@@ -90,6 +90,7 @@ void TableGenerator::GenerateTestTables() {
    * with a name, size, and schema. We also configure the columns of the table. If
    * you add a new table, set it up here.
    */
+  // 多个表，表名，行的个数，列（列名，类型，能否为nullptr，未知，最小值，最大值）
   std::vector<TableInsertMeta> insert_meta{
       // The empty table
       {"empty_table", 0, {{"colA", TypeId::INTEGER, false, Dist::Serial, 0, 0}}},
@@ -165,6 +166,7 @@ void TableGenerator::GenerateTestTables() {
   for (auto &table_meta : insert_meta) {
     // Create Schema
     std::vector<Column> cols{};
+    // 只分配空间，capacity
     cols.reserve(table_meta.col_meta_.size());
     for (const auto &col_meta : table_meta.col_meta_) {
       if (col_meta.type_ != TypeId::VARCHAR) {
@@ -173,8 +175,11 @@ void TableGenerator::GenerateTestTables() {
         cols.emplace_back(col_meta.name_, col_meta.type_, TEST_VARLEN_SIZE);
       }
     }
+    // 提取的columns构建schema
     Schema schema(cols);
+    // 返回table_info（包括表名，tableheap等）
     auto info = exec_ctx_->GetCatalog()->CreateTable(exec_ctx_->GetTransaction(), table_meta.name_, schema);
+    // 给表填充好数据
     FillTable(info, &table_meta);
   }
 }

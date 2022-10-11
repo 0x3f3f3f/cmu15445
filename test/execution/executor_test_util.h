@@ -57,8 +57,7 @@ class ExecutorTest : public ::testing::Test {
     // Create an executor context for our executors
     exec_ctx_ =
         std::make_unique<ExecutorContext>(txn_, catalog_.get(), bpm_.get(), txn_mgr_.get(), lock_manager_.get());
-
-    // Generate test tables
+    // Generate test tables，生成表，给表填充数据
     TableGenerator gen{exec_ctx_.get()};
     gen.GenerateTestTables();
 

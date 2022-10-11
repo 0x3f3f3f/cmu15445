@@ -27,8 +27,8 @@ class AbstractExpression {
  public:
   /**
    * Create a new AbstractExpression with the given children and return type.
-   * @param children the children of this abstract expression
-   * @param ret_type the return type of this abstract expression when it is evaluated
+   * @param children the children of this abstract expression 初始化依然用move，&&可能代表的是右值引用
+   * @param ret_type the return type of this abstract expression when it is evaluated 
    */
   AbstractExpression(std::vector<const AbstractExpression *> &&children, TypeId ret_type)
       : children_{std::move(children)}, ret_type_{ret_type} {}
@@ -36,7 +36,7 @@ class AbstractExpression {
   /** Virtual destructor. */
   virtual ~AbstractExpression() = default;
 
-  /** @return The value obtained by evaluating the tuple with the given schema */
+  /** @return The value obtained by evaluating评估 the tuple with the given schema */
   virtual auto Evaluate(const Tuple *tuple, const Schema *schema) const -> Value = 0;
 
   /**

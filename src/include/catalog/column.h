@@ -30,7 +30,7 @@ class Column {
   /**
    * Non-variable-length constructor for creating a Column.
    * @param column_name name of the column
-   * @param type type of the column
+   * @param type type of the column 数据库中列的数据类型，tinyint smallint int ...
    * @param expr expression used to create this column
    */
   Column(std::string column_name, TypeId type, const AbstractExpression *expr = nullptr)

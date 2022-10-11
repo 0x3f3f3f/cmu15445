@@ -93,7 +93,7 @@ struct IndexInfo {
 };
 
 /**
- * The Catalog is a non-persistent catalog that is designed for
+ * The Catalog is a non-persistent catalog（目录） that is designed for
  * use by executors within the DBMS execution engine. It handles
  * table creation, table lookup, index creation, and index lookup.
  */
@@ -129,7 +129,7 @@ class Catalog {
     // Construct the table heap
     auto table = std::make_unique<TableHeap>(bpm_, lock_manager_, log_manager_, txn);
 
-    // Fetch the table OID for the new table
+    // Fetch the table OID for the new table，把next_table_oid_初始值给到table_old，把next_table_oid_赋值为1
     const auto table_oid = next_table_oid_.fetch_add(1);
 
     // Construct the table information
@@ -155,10 +155,8 @@ class Catalog {
       // Table not found
       return NULL_TABLE_INFO;
     }
-
     auto meta = tables_.find(table_oid->second);
     BUSTUB_ASSERT(meta != tables_.end(), "Broken Invariant");
-
     return (meta->second).get();
   }
 
@@ -338,6 +336,7 @@ class Catalog {
   std::unordered_map<std::string, table_oid_t> table_names_;
 
   /** The next table identifier to be used. */
+  // 全局变量，防止多线程访问的时候出现问题
   std::atomic<table_oid_t> next_table_oid_{0};
 
   /**

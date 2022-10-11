@@ -16,12 +16,12 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_manager.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/update_plan.h"
 #include "storage/table/tuple.h"
 #include "type/value_factory.h"
-
 namespace bustub {
 
 /**
@@ -53,10 +53,10 @@ class UpdateExecutor : public AbstractExecutor {
    * NOTE: UpdateExecutor::Next() does not use the `tuple` out-parameter.
    * NOTE: UpdateExecutor::Next() does not use the `rid` out-parameter.
    */
-  auto Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool override;
+  bool Next([[maybe_unused]] Tuple *tuple, RID *rid) override;
 
   /** @return The output schema for the update */
-  auto GetOutputSchema() -> const Schema * override { return plan_->OutputSchema(); };
+  const Schema *GetOutputSchema() override { return plan_->OutputSchema(); };
 
  private:
   /**
@@ -64,7 +64,9 @@ class UpdateExecutor : public AbstractExecutor {
    * based on the `UpdateInfo` provided in the plan.
    * @param src_tuple The tuple to be updated
    */
-  auto GenerateUpdatedTuple(const Tuple &src_tuple) -> Tuple;
+  Tuple GenerateUpdatedTuple(const Tuple &src_tuple);
+
+  void UpdateDataAndIndex(Tuple &tuple, RID &rid);
 
   /** The update plan node to be executed */
   const UpdatePlanNode *plan_;

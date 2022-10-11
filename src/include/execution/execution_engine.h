@@ -64,15 +64,17 @@ class ExecutionEngine {
           result_set->push_back(tuple);
         }
       }
+     
     } catch (Exception &e) {
       // TODO(student): handle exceptions
     }
-
+    // std::cout << 111111111 << std::endl;
     return true;
   }
 
  private:
   /** The buffer pool manager used during query execution */
+  // [[maybe_unused]] 告诉编译器，即使没有用到也不要警告
   [[maybe_unused]] BufferPoolManager *bpm_;
   /** The transaction manager used during query execution */
   [[maybe_unused]] TransactionManager *txn_mgr_;
