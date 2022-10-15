@@ -38,6 +38,7 @@ class InsertExecutor : public AbstractExecutor {
    */
   InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *plan,
                  std::unique_ptr<AbstractExecutor> &&child_executor);
+  // ~InsertExecutor();
 
   /** Initialize the insert */
   void Init() override;
@@ -55,18 +56,19 @@ class InsertExecutor : public AbstractExecutor {
 
   /** @return The output schema for the insert */
   auto GetOutputSchema() -> const Schema * override { return plan_->OutputSchema(); };
+  // 非const的
+  void InsertIntoDataAndIndex(Tuple *tuple);
 
-  void InsertIntoDataAndIndex(Tuple &tuple);
  private:
   /** The insert plan node to be executed*/
   const InsertPlanNode *plan_;
-  
+
   TableHeap *table_heap_;
-  
+
   TableInfo *table_info_;
 
   Catalog *catalog_;
-  
+
   std::unique_ptr<AbstractExecutor> child_executor_;
 };
 

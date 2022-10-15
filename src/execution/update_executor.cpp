@@ -19,29 +19,27 @@ UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *
                                std::unique_ptr<AbstractExecutor> &&child_executor)
     : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
-void UpdateExecutor::Init() {
-  table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid());
-}
+void UpdateExecutor::Init() { table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid()); }
 
-void UpdateExecutor::UpdateDataAndIndex(Tuple &old_tuple, RID &rid) {
+void UpdateExecutor::UpdateDataAndIndex(Tuple *old_tuple, RID *rid) {
   TableHeap *table_heap = table_info_->table_.get();
   // 更新记录
-  Tuple new_tuple = GenerateUpdatedTuple(old_tuple);
-  if (!table_heap->UpdateTuple(new_tuple, rid, exec_ctx_->GetTransaction())) {
+  Tuple new_tuple = GenerateUpdatedTuple(*old_tuple);
+  if (!table_heap->UpdateTuple(new_tuple, *rid, exec_ctx_->GetTransaction())) {
     throw Exception(ExceptionType::UNKNOWN_TYPE, "update data error");
   }
 
   // 还要更新索引
-    for (const auto &index : exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_)) {
-      // 先删旧索引后增新索引
-      auto index_info = index->index_.get();
-      index_info->DeleteEntry(
-          old_tuple.KeyFromTuple(table_info_->schema_, *index_info->GetKeySchema(), index_info->GetKeyAttrs()),
-          rid, exec_ctx_->GetTransaction());
-      index_info->InsertEntry(
-          new_tuple.KeyFromTuple(table_info_->schema_, *index_info->GetKeySchema(), index_info->GetKeyAttrs()),
-          rid, exec_ctx_->GetTransaction());
-    }
+  for (const auto &index : exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_)) {
+    // 先删旧索引后增新索引
+    auto index_info = index->index_.get();
+    index_info->DeleteEntry(
+        old_tuple->KeyFromTuple(table_info_->schema_, *index_info->GetKeySchema(), index_info->GetKeyAttrs()), *rid,
+        exec_ctx_->GetTransaction());
+    index_info->InsertEntry(
+        new_tuple.KeyFromTuple(table_info_->schema_, *index_info->GetKeySchema(), index_info->GetKeyAttrs()), *rid,
+        exec_ctx_->GetTransaction());
+  }
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
@@ -50,7 +48,7 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     Tuple tuple;
     RID rid;
     while (child_executor_->Next(&tuple, &rid)) {
-      UpdateDataAndIndex(tuple, rid);
+      UpdateDataAndIndex(&tuple, &rid);
     }
   } catch (Exception &e) {
     throw Exception(ExceptionType::UNKNOWN_TYPE, "select error during update");

@@ -28,7 +28,7 @@ class AbstractExpression {
   /**
    * Create a new AbstractExpression with the given children and return type.
    * @param children the children of this abstract expression 初始化依然用move，&&可能代表的是右值引用
-   * @param ret_type the return type of this abstract expression when it is evaluated 
+   * @param ret_type the return type of this abstract expression when it is evaluated
    */
   AbstractExpression(std::vector<const AbstractExpression *> &&children, TypeId ret_type)
       : children_{std::move(children)}, ret_type_{ret_type} {}

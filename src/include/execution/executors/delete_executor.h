@@ -56,7 +56,7 @@ class DeleteExecutor : public AbstractExecutor {
   auto GetOutputSchema() -> const Schema * override { return plan_->OutputSchema(); };
 
  private:
-  void DeleteDataAndIndex(Tuple &tuple, RID &rid);
+  void DeleteDataAndIndex(Tuple *tuple, RID *rid);
   /** The delete plan node to be executed */
   const DeletePlanNode *plan_;
   /** The child executor from which RIDs for deleted tuples are pulled */

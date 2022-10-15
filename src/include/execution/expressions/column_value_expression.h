@@ -36,7 +36,7 @@ class ColumnValueExpression : public AbstractExpression {
   auto Evaluate(const Tuple *tuple, const Schema *schema) const -> Value override {
     return tuple->GetValue(schema, col_idx_);
   }
-  
+
   auto EvaluateJoin(const Tuple *left_tuple, const Schema *left_schema, const Tuple *right_tuple,
                     const Schema *right_schema) const -> Value override {
     return tuple_idx_ == 0 ? left_tuple->GetValue(left_schema, col_idx_)

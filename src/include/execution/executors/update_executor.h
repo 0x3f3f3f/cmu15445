@@ -65,8 +65,8 @@ class UpdateExecutor : public AbstractExecutor {
    * @param src_tuple The tuple to be updated
    */
   Tuple GenerateUpdatedTuple(const Tuple &src_tuple);
-
-  void UpdateDataAndIndex(Tuple &tuple, RID &rid);
+  // 引用必须用const修饰，但是const修饰的对象只能调用const修饰的成员变量和成员函数
+  void UpdateDataAndIndex(Tuple *tuple, RID *rid);
 
   /** The update plan node to be executed */
   const UpdatePlanNode *plan_;

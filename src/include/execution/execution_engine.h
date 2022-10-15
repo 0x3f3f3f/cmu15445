@@ -61,12 +61,13 @@ class ExecutionEngine {
       RID rid;
       while (executor->Next(&tuple, &rid)) {
         if (result_set != nullptr) {
+          // std::cout << 1111 << std::endl;
           result_set->push_back(tuple);
         }
       }
-     
     } catch (Exception &e) {
       // TODO(student): handle exceptions
+      throw Exception(ExceptionType::UNKNOWN_TYPE, "excute plan error!");
     }
     // std::cout << 111111111 << std::endl;
     return true;
