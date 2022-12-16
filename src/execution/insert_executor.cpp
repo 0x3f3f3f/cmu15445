@@ -54,6 +54,12 @@ void InsertExecutor::InsertIntoDataAndIndex(Tuple *tuple) {
 }
 
 auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *trans = exec_ctx_->GetTransaction();
+
+  if (!lock_manager->LockExclusive(trans, *rid)) {
+    throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
+  }
   // 没有子执行语句的执行
   if (plan_->IsRawInsert()) {
     // LOG_DEBUG("%lu", vals.size());

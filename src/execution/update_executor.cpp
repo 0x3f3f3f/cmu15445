@@ -43,6 +43,11 @@ void UpdateExecutor::UpdateDataAndIndex(Tuple *old_tuple, RID *rid) {
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *trans = exec_ctx_->GetTransaction();
+  if (!lock_manager->LockExclusive(trans, *rid)) {
+    throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
+  }
   child_executor_->Init();
   try {
     Tuple tuple;

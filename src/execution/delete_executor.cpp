@@ -39,6 +39,12 @@ void DeleteExecutor::DeleteDataAndIndex(Tuple *tuple, RID *rid) {
   }
 }
 auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *trans = exec_ctx_->GetTransaction();
+
+  if (!lock_manager->LockExclusive(trans, *rid)) {
+    throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
+  }
   try {
     Tuple tuple;
     RID rid;

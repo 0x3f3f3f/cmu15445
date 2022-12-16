@@ -77,7 +77,7 @@ void BasicTest1() {
     delete txns[i];
   }
 }
-TEST(LockManagerTest, DISABLED_BasicTest) { BasicTest1(); }
+TEST(LockManagerTest, BasicTest) { BasicTest1(); }
 
 void TwoPLTest() {
   LockManager lock_mgr{};
@@ -123,7 +123,7 @@ void TwoPLTest() {
 
   delete txn;
 }
-TEST(LockManagerTest, DISABLED_TwoPLTest) { TwoPLTest(); }
+TEST(LockManagerTest, TwoPLTest) { TwoPLTest(); }
 
 void UpgradeTest() {
   LockManager lock_mgr{};
@@ -150,7 +150,7 @@ void UpgradeTest() {
   txn_mgr.Commit(&txn);
   CheckCommitted(&txn);
 }
-TEST(LockManagerTest, DISABLED_UpgradeLockTest) { UpgradeTest(); }
+TEST(LockManagerTest, UpgradeLockTest) { UpgradeTest(); }
 
 void WoundWaitBasicTest() {
   LockManager lock_mgr{};
@@ -159,8 +159,9 @@ void WoundWaitBasicTest() {
 
   int id_hold = 0;
   int id_die = 1;
-
+  // 异步通信，负责写
   std::promise<void> t1done;
+  // 只负责读，promise和future也进行关联
   std::shared_future<void> t1_future(t1done.get_future());
 
   auto wait_die_task = [&]() {
@@ -172,7 +173,7 @@ void WoundWaitBasicTest() {
 
     CheckGrowing(&txn_die);
     CheckTxnLockSize(&txn_die, 0, 1);
-
+    // 让future的wait等待退出
     t1done.set_value();
 
     // wait for txn 0 to call lock_exclusive(), which should wound us
@@ -190,7 +191,7 @@ void WoundWaitBasicTest() {
   // launch the waiter thread
   std::thread wait_thread{wait_die_task};
 
-  // wait for txn1 to lock
+  // wait for txn1 to lock 上面sleep以后，这里就会触发唤醒，执行下面的操作
   t1_future.wait();
 
   bool res = lock_mgr.LockExclusive(&txn_hold, rid);
@@ -202,6 +203,6 @@ void WoundWaitBasicTest() {
   txn_mgr.Commit(&txn_hold);
   CheckCommitted(&txn_hold);
 }
-TEST(LockManagerTest, DISABLED_WoundWaitBasicTest) { WoundWaitBasicTest(); }
+TEST(LockManagerTest, WoundWaitBasicTest) { WoundWaitBasicTest(); }
 
 }  // namespace bustub

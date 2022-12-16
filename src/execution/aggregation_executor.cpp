@@ -31,6 +31,8 @@ void AggregationExecutor::Init() {
     RID rid;
     // 获得初始数据，放到aht类中的哈希表中，绑定到sql语句的各个聚合函数部分
     while (child_->Next(&tuple, &rid)) {
+      // MakeAggregateKey(&tuple)用来作为key，拿group by
+      // col_b来说，就是对应不同col_b的count,sum,min,max等组成的tuple，然后用后面的形成的MakeAggregateValue，对其更新。
       map_.InsertCombine(MakeAggregateKey(&tuple), MakeAggregateValue(&tuple));
     }
   } catch (Exception &e) {

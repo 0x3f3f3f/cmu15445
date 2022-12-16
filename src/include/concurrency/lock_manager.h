@@ -24,6 +24,7 @@
 #include "common/config.h"
 #include "common/rid.h"
 #include "concurrency/transaction.h"
+// #include "concurrency/transaction_manager.h"
 
 namespace bustub {
 
@@ -34,18 +35,19 @@ class TransactionManager;
  */
 class LockManager {
   enum class LockMode { SHARED, EXCLUSIVE };
-
+  // 在一行中的事务id，事务加的锁是共享还是互斥
   class LockRequest {
    public:
     LockRequest(txn_id_t txn_id, LockMode lock_mode) : txn_id_(txn_id), lock_mode_(lock_mode), granted_(false) {}
-
+    // 表示请求该元组锁的事务ID
     txn_id_t txn_id_;
     LockMode lock_mode_;
-    bool granted_;
+    bool granted_;  // ?
   };
 
   class LockRequestQueue {
    public:
+    // 一行多个事务等待加锁
     std::list<LockRequest> request_queue_;
     // for notifying blocked transactions on this rid
     std::condition_variable cv_;
@@ -105,10 +107,16 @@ class LockManager {
   auto Unlock(Transaction *txn, const RID &rid) -> bool;
 
  private:
+  auto LockSharedNeedWait(Transaction *txn, LockRequestQueue *lock_queue) -> bool;
+  auto LockExclusiveNeedWait(Transaction *txn, LockRequestQueue *lock_queue) -> bool;
+  auto LockUpgradeNeedWait(Transaction *txn, LockRequestQueue *lock_queue, const RID &rid) -> bool;
   std::mutex latch_;
 
   /** Lock table for lock requests. */
+  // 一行对应RID即将加的锁，放在list的队列中
   std::unordered_map<RID, LockRequestQueue> lock_table_;
+
+  std::unordered_map<txn_id_t, Transaction *> mp_;
 };
 
 }  // namespace bustub

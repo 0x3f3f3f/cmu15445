@@ -21,6 +21,7 @@
 namespace bustub {
 
 std::unordered_map<txn_id_t, Transaction *> TransactionManager::txn_map = {};
+// 读写锁
 std::shared_mutex TransactionManager::txn_map_mutex = {};
 
 auto TransactionManager::Begin(Transaction *txn, IsolationLevel isolation_level) -> Transaction * {
@@ -109,7 +110,7 @@ void TransactionManager::Abort(Transaction *txn) {
 }
 
 void TransactionManager::BlockAllTransactions() { global_txn_latch_.WLock(); }
-
+// resume恢复
 void TransactionManager::ResumeTransactions() { global_txn_latch_.WUnlock(); }
 
 }  // namespace bustub

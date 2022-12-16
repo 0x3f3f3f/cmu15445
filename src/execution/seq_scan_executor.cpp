@@ -13,7 +13,7 @@
 #include "execution/executors/seq_scan_executor.h"
 
 namespace bustub {
-// 有参构造对象作为成员变量必须要再初始化列表中赋值, 可以虚拟构造一个，重新赋值。父类的成员变量也是可以使用的。
+// 有参构造对象作为成员变量必须要再初始化列表中赋值, 可以虚拟构造一个，重新赋值。父类的成员变量子类也是可以使用的。
 SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan)
     : AbstractExecutor(exec_ctx), plan_(plan), iterator_(nullptr, RID(), nullptr) {}
 
@@ -28,6 +28,13 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   // 判断是否到达表尾，直接false
   if (iterator_ == table_heap_->End()) {
     return false;
+  }
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *trans = exec_ctx_->GetTransaction();
+  if (trans->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+    if (!lock_manager->LockShared(trans, *rid)) {
+      throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
+    }
   }
   // 获得rid用来赋值给形成的新的tuple
   RID target_rid = iterator_->GetRid();
@@ -50,6 +57,13 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   // 谓词表达提前构造好的，什么和什么比都是确定的，只需要传入新的tuple和新的tuple的schema
   // 谓词表达式的构造一定是根据out_put_schema提前构造好的！！！看evaluate实现就能明白必须用新的schema，否则col_idx可能会越界、
   const AbstractExpression *predicate = plan_->GetPredicate();
+
+  if (trans->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
+    if (!lock_manager->Unlock(trans, *rid)) {
+      throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
+    }
+  }
+
   // 有可能存在没有谓词逻辑的时候，比如全选。
   if (predicate == nullptr || predicate->Evaluate(&tmp, out_put_schema).GetAs<bool>()) {
     *tuple = tmp;

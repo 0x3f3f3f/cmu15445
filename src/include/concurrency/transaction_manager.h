@@ -20,7 +20,9 @@
 #include "common/config.h"
 #include "concurrency/lock_manager.h"
 #include "concurrency/transaction.h"
+#include "iostream"
 #include "recovery/log_manager.h"
+#include "string"
 
 namespace bustub {
 class LockManager;
@@ -103,6 +105,7 @@ class TransactionManager {
   }
 
   std::atomic<txn_id_t> next_txn_id_{0};
+  // 表示该变量可能不使用，编译器忽略，不要产生警告信息。
   LockManager *lock_manager_ __attribute__((__unused__));
   LogManager *log_manager_ __attribute__((__unused__));
 

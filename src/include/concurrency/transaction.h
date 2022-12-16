@@ -60,15 +60,16 @@ using index_oid_t = uint32_t;
 
 /**
  * WriteRecord tracks information related to a write.
+ * 写数据的记录
  */
 class TableWriteRecord {
  public:
   TableWriteRecord(RID rid, WType wtype, const Tuple &tuple, TableHeap *table)
       : rid_(rid), wtype_(wtype), tuple_(tuple), table_(table) {}
-
   RID rid_;
   WType wtype_;
   /** The tuple is only used for the update operation. */
+  // 存储修改之前的数据，用来undo
   Tuple tuple_;
   /** The table heap specifies which table this write record is for. */
   TableHeap *table_;
@@ -76,6 +77,7 @@ class TableWriteRecord {
 
 /**
  * WriteRecord tracks information related to a write.
+ * 写索引的记录
  */
 class IndexWriteRecord {
  public:
@@ -264,21 +266,23 @@ class Transaction {
   /** The ID of this transaction. */
   txn_id_t txn_id_;
 
-  /** The undo set of table tuples. */
+  /** The undo set of table tuples. 撤销的数据操作*/
   std::shared_ptr<std::deque<TableWriteRecord>> table_write_set_;
-  /** The undo set of indexes. */
+  /** The undo set of indexes. 撤销的索引操作*/
   std::shared_ptr<std::deque<IndexWriteRecord>> index_write_set_;
   /** The LSN of the last record written by the transaction. */
   lsn_t prev_lsn_;
 
-  /** Concurrent index: the pages that were latched during index operation. */
+  /** Concurrent index: the pages that were latched during index operation.索引操作的时候，被锁村的页 */
   std::shared_ptr<std::deque<Page *>> page_set_;
-  /** Concurrent index: the page IDs that were deleted during index operation.*/
+  /** Concurrent index: the page IDs that were deleted during index operation.索引操作下，被删除的页的ids*/
   std::shared_ptr<std::unordered_set<page_id_t>> deleted_page_set_;
 
   /** LockManager: the set of shared-locked tuples held by this transaction. */
+  // 哪些RID加了共享锁，相当于行锁
   std::shared_ptr<std::unordered_set<RID>> shared_lock_set_;
   /** LockManager: the set of exclusive-locked tuples held by this transaction. */
+  // 哪些RID加了互斥锁，相当于行锁
   std::shared_ptr<std::unordered_set<RID>> exclusive_lock_set_;
 };
 
