@@ -38,6 +38,12 @@ void InsertExecutor::InsertIntoDataAndIndex(Tuple *tuple) {
   if (!table_heap_->InsertTuple(*tuple, &rid, GetExecutorContext()->GetTransaction())) {
     throw Exception(ExceptionType::OUT_OF_MEMORY, "没有足够的内存插入");
   }
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *trans = exec_ctx_->GetTransaction();
+  // 加写锁直接加，不用释放，事务提交和abort的时候释放就可以
+  if (!lock_manager->LockExclusive(trans, rid)) {
+    throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
+  }
   // 插入索引，一个表的索引完全可能存在多个，对全部的索引进行更新.
   // std::vector<IndexInfo *> indexes = catalog_->GetTableIndexes(table_info_->name_);
   // for (auto &index : indexes) {
@@ -54,12 +60,6 @@ void InsertExecutor::InsertIntoDataAndIndex(Tuple *tuple) {
 }
 
 auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
-  LockManager *lock_manager = exec_ctx_->GetLockManager();
-  Transaction *trans = exec_ctx_->GetTransaction();
-
-  if (!lock_manager->LockExclusive(trans, *rid)) {
-    throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
-  }
   // 没有子执行语句的执行
   if (plan_->IsRawInsert()) {
     // LOG_DEBUG("%lu", vals.size());

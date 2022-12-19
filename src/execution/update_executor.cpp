@@ -43,16 +43,17 @@ void UpdateExecutor::UpdateDataAndIndex(Tuple *old_tuple, RID *rid) {
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
-  LockManager *lock_manager = exec_ctx_->GetLockManager();
-  Transaction *trans = exec_ctx_->GetTransaction();
-  if (!lock_manager->LockExclusive(trans, *rid)) {
-    throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
-  }
+  // 同插入
   child_executor_->Init();
   try {
     Tuple tuple;
     RID rid;
     while (child_executor_->Next(&tuple, &rid)) {
+      LockManager *lock_manager = exec_ctx_->GetLockManager();
+      Transaction *trans = exec_ctx_->GetTransaction();
+      if (!lock_manager->LockExclusive(trans, rid)) {
+        throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
+      }
       UpdateDataAndIndex(&tuple, &rid);
     }
   } catch (Exception &e) {

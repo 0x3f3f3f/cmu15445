@@ -29,15 +29,17 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (iterator_ == table_heap_->End()) {
     return false;
   }
+
+  // 获得rid用来赋值给形成的新的tuple
+  RID target_rid = iterator_->GetRid();
+  // 除了读未提交意外都得加读锁
   LockManager *lock_manager = exec_ctx_->GetLockManager();
   Transaction *trans = exec_ctx_->GetTransaction();
   if (trans->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
-    if (!lock_manager->LockShared(trans, *rid)) {
+    if (!lock_manager->LockShared(trans, target_rid)) {
       throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
     }
   }
-  // 获得rid用来赋值给形成的新的tuple
-  RID target_rid = iterator_->GetRid();
   // 返回值const修饰必须用const修饰的变量接收
   const Schema *out_put_schema = GetOutputSchema();
   std::vector<Value> vals;
@@ -57,9 +59,9 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   // 谓词表达提前构造好的，什么和什么比都是确定的，只需要传入新的tuple和新的tuple的schema
   // 谓词表达式的构造一定是根据out_put_schema提前构造好的！！！看evaluate实现就能明白必须用新的schema，否则col_idx可能会越界、
   const AbstractExpression *predicate = plan_->GetPredicate();
-
+  // 不是所有的都得满足读已提交，只需要让RR(Read repeatable满足就可以)
   if (trans->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
-    if (!lock_manager->Unlock(trans, *rid)) {
+    if (!lock_manager->Unlock(trans, target_rid)) {
       throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
     }
   }

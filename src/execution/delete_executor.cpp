@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "execution/executors/delete_executor.h"
+#include "include/concurrency/transaction.h"
 
 namespace bustub {
 
@@ -26,6 +27,12 @@ void DeleteExecutor::Init() {
 }
 
 void DeleteExecutor::DeleteDataAndIndex(Tuple *tuple, RID *rid) {
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *trans = exec_ctx_->GetTransaction();
+
+  if (!lock_manager->LockExclusive(trans, *rid)) {
+    throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
+  }
   TableHeap *table_heap = table_info_->table_.get();
   if (!table_heap->MarkDelete(*rid, exec_ctx_->GetTransaction())) {
     throw Exception(ExceptionType::UNKNOWN_TYPE, "delete data error");
@@ -36,15 +43,12 @@ void DeleteExecutor::DeleteDataAndIndex(Tuple *tuple, RID *rid) {
     index_info->DeleteEntry(
         tuple->KeyFromTuple(table_info_->schema_, *index_info->GetKeySchema(), index_info->GetKeyAttrs()), *rid,
         exec_ctx_->GetTransaction());
+    // abort要复原操作，需要保留删除之前的内容
+    trans->GetIndexWriteSet()->emplace_back(
+        IndexWriteRecord(*rid, table_info_->oid_, WType::DELETE, *tuple, index->index_oid_, exec_ctx_->GetCatalog()));
   }
 }
 auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
-  LockManager *lock_manager = exec_ctx_->GetLockManager();
-  Transaction *trans = exec_ctx_->GetTransaction();
-
-  if (!lock_manager->LockExclusive(trans, *rid)) {
-    throw TransactionAbortException(trans->GetTransactionId(), AbortReason::DEADLOCK);
-  }
   try {
     Tuple tuple;
     RID rid;

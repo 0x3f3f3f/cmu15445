@@ -1,4 +1,3 @@
-
 #include <atomic>
 #include <cstdio>
 #include <memory>
@@ -152,52 +151,52 @@ void CheckTxnLockSize(Transaction *txn, size_t shared_size, size_t exclusive_siz
   EXPECT_EQ(txn->GetExclusiveLockSet()->size(), exclusive_size);
 }
 
-// /****************************
-//  * Rollback Tests (15 pts)
-//  ****************************/
+/****************************
+ * Rollback Tests (15 pts)
+ ****************************/
 
-// // NOLINTNEXTLINE
-// TEST_F(GradingRollbackTest, SimpleInsertRollbackTest) {
-//   // txn1: INSERT INTO empty_table2 VALUES (200, 20), (201, 21), (202, 22)
-//   // txn1: abort
-//   // txn2: SELECT * FROM empty_table2;
-//   auto txn1 = GetTxnManager()->Begin();
-//   auto exec_ctx1 = std::make_unique<ExecutorContext>(txn1, GetCatalog(), GetBPM(), GetTxnManager(), GetLockManager());
-//   // Create Values to insert
-//   std::vector<Value> val1{ValueFactory::GetIntegerValue(200), ValueFactory::GetIntegerValue(20)};
-//   std::vector<Value> val2{ValueFactory::GetIntegerValue(201), ValueFactory::GetIntegerValue(21)};
-//   std::vector<Value> val3{ValueFactory::GetIntegerValue(202), ValueFactory::GetIntegerValue(22)};
-//   std::vector<std::vector<Value>> raw_vals{val1, val2, val3};
-//   // Create insert plan node
-//   auto table_info = exec_ctx1->GetCatalog()->GetTable("empty_table2");
-//   InsertPlanNode insert_plan{std::move(raw_vals), table_info->oid_};
+// NOLINTNEXTLINE
+TEST_F(GradingRollbackTest, SimpleInsertRollbackTest) {
+  // txn1: INSERT INTO empty_table2 VALUES (200, 20), (201, 21), (202, 22)
+  // txn1: abort
+  // txn2: SELECT * FROM empty_table2;
+  auto txn1 = GetTxnManager()->Begin();
+  auto exec_ctx1 = std::make_unique<ExecutorContext>(txn1, GetCatalog(), GetBPM(), GetTxnManager(),
+  GetLockManager());
+  // Create Values to insert
+  std::vector<Value> val1{ValueFactory::GetIntegerValue(200), ValueFactory::GetIntegerValue(20)};
+  std::vector<Value> val2{ValueFactory::GetIntegerValue(201), ValueFactory::GetIntegerValue(21)};
+  std::vector<Value> val3{ValueFactory::GetIntegerValue(202), ValueFactory::GetIntegerValue(22)};
+  std::vector<std::vector<Value>> raw_vals{val1, val2, val3};
+  // Create insert plan node
+  auto table_info = exec_ctx1->GetCatalog()->GetTable("empty_table2");
+  InsertPlanNode insert_plan{std::move(raw_vals), table_info->oid_};
 
-//   auto key_schema = ParseCreateStatement("a bigint");
-//   GenericComparator<8> comparator(key_schema.get());
+  auto key_schema = ParseCreateStatement("a bigint");
+  GenericComparator<8> comparator(key_schema.get());
 
-//   GetExecutionEngine()->Execute(&insert_plan, nullptr, txn1, exec_ctx1.get());
-//   GetTxnManager()->Abort(txn1);
-//   delete txn1;
+  GetExecutionEngine()->Execute(&insert_plan, nullptr, txn1, exec_ctx1.get());
+  GetTxnManager()->Abort(txn1);
+  delete txn1;
 
-//   // Iterate through table make sure that values were not inserted.
-//   auto txn2 = GetTxnManager()->Begin();
-//   auto exec_ctx2 = std::make_unique<ExecutorContext>(txn2, GetCatalog(), GetBPM(), GetTxnManager(), GetLockManager());
-//   auto &schema = table_info->schema_;
-//   auto col_a = MakeColumnValueExpression(schema, 0, "colA");
-//   auto col_b = MakeColumnValueExpression(schema, 0, "colB");
-//   auto out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
-//   SeqScanPlanNode scan_plan{out_schema, nullptr, table_info->oid_};
+  // Iterate through table make sure that values were not inserted.
+  auto txn2 = GetTxnManager()->Begin();
+  auto exec_ctx2 = std::make_unique<ExecutorContext>(txn2, GetCatalog(), GetBPM(), GetTxnManager(),
+  GetLockManager()); auto &schema = table_info->schema_; auto col_a = MakeColumnValueExpression(schema, 0, "colA");
+  auto col_b = MakeColumnValueExpression(schema, 0, "colB");
+  auto out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
+  SeqScanPlanNode scan_plan{out_schema, nullptr, table_info->oid_};
 
-//   std::vector<Tuple> result_set;
-//   GetExecutionEngine()->Execute(&scan_plan, &result_set, txn2, exec_ctx2.get());
+  std::vector<Tuple> result_set;
+  GetExecutionEngine()->Execute(&scan_plan, &result_set, txn2, exec_ctx2.get());
 
-//   // Size
-//   ASSERT_EQ(result_set.size(), 0);
-//   std::vector<RID> rids;
+  // Size
+  ASSERT_EQ(result_set.size(), 0);
+  std::vector<RID> rids;
 
-//   GetTxnManager()->Commit(txn2);
-//   delete txn2;
-// }
+  GetTxnManager()->Commit(txn2);
+  delete txn2;
+}
 
 // NOLINTNEXTLINE
 TEST_F(GradingRollbackTest, SimpleDeleteRollbackTest) {
@@ -249,86 +248,84 @@ TEST_F(GradingRollbackTest, SimpleDeleteRollbackTest) {
   delete txn2;
 }
 
-// // NOLINTNEXTLINE
-// TEST_F(GradingRollbackTest, SimpleUpdateRollbackTest) {
-//   // txn1: INSERT INTO empty_table2 SELECT colA, colA FROM test_1 WHERE colA < 50
-//   // txn2: UPDATE empty_table2 SET colA = colA+10 WHERE colA < 50
-//   // txn2 abort
-//   // txn3: SELECT colA FROM test_1 WHERE colA < 50
-//   std::unique_ptr<AbstractPlanNode> scan_plan1;
-//   const Schema *out_schema1;
-//   {
-//     auto table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
-//     auto &schema = table_info->schema_;
-//     auto col_a = MakeColumnValueExpression(schema, 0, "colA");
-//     auto const600 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(50));
-//     auto predicate = MakeComparisonExpression(col_a, const600, ComparisonType::LessThan);
-//     out_schema1 = MakeOutputSchema({{"colA", col_a}, {"colA", col_a}});
-//     scan_plan1 = std::make_unique<SeqScanPlanNode>(out_schema1, predicate, table_info->oid_);
-//   }
-//   std::unique_ptr<AbstractPlanNode> insert_plan;
-//   {
-//     auto table_info = GetExecutorContext()->GetCatalog()->GetTable("empty_table2");
-//     insert_plan = std::make_unique<InsertPlanNode>(scan_plan1.get(), table_info->oid_);
-//   }
+// NOLINTNEXTLINE
+TEST_F(GradingRollbackTest, SimpleUpdateRollbackTest) {
+  // txn1: INSERT INTO empty_table2 SELECT colA, colA FROM test_1 WHERE colA < 50
+  // txn2: UPDATE empty_table2 SET colA = colA+10 WHERE colA < 50
+  // txn2 abort
+  // txn3: SELECT colA FROM test_1 WHERE colA < 50
+  std::unique_ptr<AbstractPlanNode> scan_plan1;
+  const Schema *out_schema1;
+  {
+    auto table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
+    auto &schema = table_info->schema_;
+    auto col_a = MakeColumnValueExpression(schema, 0, "colA");
+    auto const600 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(50));
+    auto predicate = MakeComparisonExpression(col_a, const600, ComparisonType::LessThan);
+    out_schema1 = MakeOutputSchema({{"colA", col_a}, {"colA", col_a}});
+    scan_plan1 = std::make_unique<SeqScanPlanNode>(out_schema1, predicate, table_info->oid_);
+  }
+  std::unique_ptr<AbstractPlanNode> insert_plan;
+  {
+    auto table_info = GetExecutorContext()->GetCatalog()->GetTable("empty_table2");
+    insert_plan = std::make_unique<InsertPlanNode>(scan_plan1.get(), table_info->oid_);
+  }
 
-//   auto txn1 = GetTxnManager()->Begin();
-//   auto exec_ctx1 = std::make_unique<ExecutorContext>(txn1, GetCatalog(), GetBPM(), GetTxnManager(), GetLockManager());
-//   GetExecutionEngine()->Execute(insert_plan.get(), nullptr, txn1, exec_ctx1.get());
-//   GetTxnManager()->Commit(txn1);
-//   delete txn1;
+  auto txn1 = GetTxnManager()->Begin();
+  auto exec_ctx1 = std::make_unique<ExecutorContext>(txn1, GetCatalog(), GetBPM(), GetTxnManager(),
+  GetLockManager()); GetExecutionEngine()->Execute(insert_plan.get(), nullptr, txn1, exec_ctx1.get());
+  GetTxnManager()->Commit(txn1);
+  delete txn1;
 
-//   // Construct query plan
-//   auto table_info = GetExecutorContext()->GetCatalog()->GetTable("empty_table2");
-//   auto &schema = table_info->schema_;
-//   auto col_a = MakeColumnValueExpression(schema, 0, "colA");
-//   auto col_b = MakeColumnValueExpression(schema, 0, "colB");
-//   auto const50 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(50));
-//   auto predicate = MakeComparisonExpression(col_a, const50, ComparisonType::LessThan);
-//   auto out_empty_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
-//   auto scan_empty_plan = std::make_unique<SeqScanPlanNode>(out_empty_schema, predicate, table_info->oid_);
+  // Construct query plan
+  auto table_info = GetExecutorContext()->GetCatalog()->GetTable("empty_table2");
+  auto &schema = table_info->schema_;
+  auto col_a = MakeColumnValueExpression(schema, 0, "colA");
+  auto col_b = MakeColumnValueExpression(schema, 0, "colB");
+  auto const50 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(50));
+  auto predicate = MakeComparisonExpression(col_a, const50, ComparisonType::LessThan);
+  auto out_empty_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
+  auto scan_empty_plan = std::make_unique<SeqScanPlanNode>(out_empty_schema, predicate, table_info->oid_);
 
-//   // Create Indexes for col1 and col2
-//   auto key_schema = ParseCreateStatement("a int");
-//   GenericComparator<8> comparator(key_schema.get());
-//   GetExecutorContext()->GetCatalog()->CreateIndex<GenericKey<8>, RID, GenericComparator<8>>(
-//       GetTxn(), "index1", "empty_table2", GetExecutorContext()->GetCatalog()->GetTable("empty_table2")->schema_,
-//       *key_schema, {0}, 8, HashFunction<GenericKey<8>>{});
-//   auto index_info = GetExecutorContext()->GetCatalog()->CreateIndex<GenericKey<8>, RID, GenericComparator<8>>(
-//       GetTxn(), "index2", "empty_table2", GetExecutorContext()->GetCatalog()->GetTable("empty_table2")->schema_,
-//       *key_schema, {1}, 8, HashFunction<GenericKey<8>>{});
+  // Create Indexes for col1 and col2
+  auto key_schema = ParseCreateStatement("a int");
+  GenericComparator<8> comparator(key_schema.get());
+  GetExecutorContext()->GetCatalog()->CreateIndex<GenericKey<8>, RID, GenericComparator<8>>(
+      GetTxn(), "index1", "empty_table2", GetExecutorContext()->GetCatalog()->GetTable("empty_table2")->schema_,
+      *key_schema, {0}, 8, HashFunction<GenericKey<8>>{});
+  auto index_info = GetExecutorContext()->GetCatalog()->CreateIndex<GenericKey<8>, RID, GenericComparator<8>>(
+      GetTxn(), "index2", "empty_table2", GetExecutorContext()->GetCatalog()->GetTable("empty_table2")->schema_,
+      *key_schema, {1}, 8, HashFunction<GenericKey<8>>{});
 
-//   std::unordered_map<uint32_t, UpdateInfo> update_attrs;
-//   update_attrs.insert(std::make_pair(0, UpdateInfo(UpdateType::Add, 10)));
-//   std::unique_ptr<AbstractPlanNode> update_plan;
-//   { update_plan = std::make_unique<UpdatePlanNode>(scan_empty_plan.get(), table_info->oid_, update_attrs); }
+  std::unordered_map<uint32_t, UpdateInfo> update_attrs;
+  update_attrs.insert(std::make_pair(0, UpdateInfo(UpdateType::Add, 10)));
+  std::unique_ptr<AbstractPlanNode> update_plan;
+  { update_plan = std::make_unique<UpdatePlanNode>(scan_empty_plan.get(), table_info->oid_, update_attrs); }
 
-//   auto txn2 = GetTxnManager()->Begin();
-//   auto exec_ctx2 = std::make_unique<ExecutorContext>(txn2, GetCatalog(), GetBPM(), GetTxnManager(), GetLockManager());
-//   std::vector<Tuple> result_set;
-//   GetExecutionEngine()->Execute(update_plan.get(), &result_set, txn2, exec_ctx2.get());
-//   GetTxnManager()->Abort(txn2);
-//   delete txn2;
+  auto txn2 = GetTxnManager()->Begin();
+  auto exec_ctx2 = std::make_unique<ExecutorContext>(txn2, GetCatalog(), GetBPM(), GetTxnManager(),
+  GetLockManager()); std::vector<Tuple> result_set; GetExecutionEngine()->Execute(update_plan.get(), &result_set,
+  txn2, exec_ctx2.get()); GetTxnManager()->Abort(txn2); delete txn2;
 
-//   auto txn3 = GetTxnManager()->Begin();
-//   auto exec_ctx3 = std::make_unique<ExecutorContext>(txn3, GetCatalog(), GetBPM(), GetTxnManager(), GetLockManager());
-//   result_set.clear();
-//   GetExecutionEngine()->Execute(scan_plan1.get(), &result_set, txn3, exec_ctx3.get());
+  auto txn3 = GetTxnManager()->Begin();
+  auto exec_ctx3 = std::make_unique<ExecutorContext>(txn3, GetCatalog(), GetBPM(), GetTxnManager(),
+  GetLockManager()); result_set.clear(); GetExecutionEngine()->Execute(scan_plan1.get(), &result_set, txn3,
+  exec_ctx3.get());
 
-//   // Verify
-//   for (const auto &tuple : result_set) {
-//     ASSERT_TRUE(tuple.GetValue(out_schema1, out_schema1->GetColIdx("colA")).GetAs<int32_t>() < 50);
-//   }
-//   ASSERT_EQ(result_set.size(), 50);
-//   Tuple index_key = Tuple(result_set[0]);
+  // Verify
+  for (const auto &tuple : result_set) {
+    ASSERT_TRUE(tuple.GetValue(out_schema1, out_schema1->GetColIdx("colA")).GetAs<int32_t>() < 50);
+  }
+  ASSERT_EQ(result_set.size(), 50);
+  Tuple index_key = Tuple(result_set[0]);
 
-//   std::vector<RID> rids;
+  std::vector<RID> rids;
 
-//   index_info->index_->ScanKey(index_key, &rids, txn3);
-//   ASSERT_TRUE(!rids.empty());
+  index_info->index_->ScanKey(index_key, &rids, txn3);
+  ASSERT_TRUE(!rids.empty());
 
-//   GetTxnManager()->Commit(txn3);
-//   delete txn3;
-// }
+  GetTxnManager()->Commit(txn3);
+  delete txn3;
+}
 
 }  // namespace bustub
